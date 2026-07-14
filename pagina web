@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>🎮 Cazador de Tesoros 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0a1a;
+            touch-action: none;
+        }
+
+        #info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            min-width: 180px;
+            pointer-events: none;
+        }
+
+        #info h1 {
+            font-size: 16px;
+            margin-bottom: 6px;
+            color: #ffd700;
+            letter-spacing: 1px;
+        }
+
+        #info p {
+            font-size: 14px;
+            margin: 3px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #info .valor {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        #info .valor-tiempo {
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+
+        #info .valor-tiempo.peligro {
+            color: #ff5252;
+            animation: parpadeo 0.5s infinite;
+        }
+
+        @keyframes parpadeo {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.92);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 200;
+            backdrop-filter: blur(12px);
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.15);
+            display: none;
+            min-width: 300px;
+        }
+
+        #game-over h2 {
+            font-size: 38px;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(255, 107, 107, 0.3);
+        }
+
+        #game-over .emoji-grande {
+            font-size: 60px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        #game-over p {
+            font-size: 20px;
+            margin: 8px 0;
+        }
+
+        #game-over .puntuacion-final {
+            color: #ffd700;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        #game-over button {
+            margin-top: 25px;
+            padding: 14px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #ffd700, #f9a825);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #1a1a2e;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+        }
+
+        #game-over button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 30px rgba(255, 215, 0, 0.5);
+        }
+
+        #game-over button:active {
+            transform: scale(0.95);
+        }
+
+        /* Controles móviles */
+        #controles-movil {
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            justify-content: center;
+            gap: 12px;
+            z-index: 100;
+            padding: 0 20px;
+        }
+
+        #controles-movil .fila {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        #controles-movil button {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            font-size: 28px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            cursor: pointer;
+            touch-action: none;
+            transition: all 0.1s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        #controles-movil button:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        #controles-movil .btn-arriba {
+            background: rgba(0, 212, 255, 0.25);
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+
+        #controles-movil .btn-abajo {
+            background: rgba(255, 107, 107, 0.25);
+            border-color: rgba(255, 107, 107, 0.5);
+        }
+
+        /* Instrucciones */
+        #instrucciones {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            pointer-events: none;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            #controles-movil {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            #controles-movil button {
+                width: 58px;
+                height: 58px;
+                font-size: 24px;
+            }
+
+            #info {
+                top: 10px;
+                left: 10px;
+                padding: 10px 14px;
+                min-width: 140px;
+            }
+
+            #info h1 {
+                font-size: 13px;
+            }
+
+            #info p {
+                font-size: 12px;
+            }
+
+            #game-over {
+                padding: 30px 25px;
+                min-width: 250px;
+            }
+
+            #game-over h2 {
+                font-size: 28px;
+            }
+
+            #instrucciones {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #controles-movil button {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            #controles-movil {
+                gap: 8px;
+                bottom: 20px;
+            }
+
+            #info {
+                top: 8px;
+                left: 8px;
+                padding: 8px 12px;
+                min-width: 120px;
+            }
+
+            #info h1 {
+                font-size: 11px;
+            }
+
+            #info p {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- UI -->
+    <div id="info">
+        <h1>🏴‍☠️ CAZADOR DE TESOROS</h1>
+        <p>💰 Tesoros: <span class="valor" id="puntuacion">0</span></p>
+        <p>⏱️ Tiempo: <span class="valor-tiempo" id="tiempo">60</span>s</p>
+    </div>
+
+    <div id="game-over">
+        <span class="emoji-grande">💀</span>
+        <h2>¡Game Over!</h2>
+        <p>Tesoros recolectados:</p>
+        <p class="puntuacion-final" id="final-puntuacion">0</p>
+        <button id="btn-reiniciar">🔄 Jugar de nuevo</button>
+    </div>
+
+    <div id="instrucciones">⌨️ WASD para moverte · 🎯 Recolecta tesoros · ⚠️ Evita obstáculos</div>
+
+    <!-- Controles móviles -->
+    <div id="controles-movil">
+        <div class="fila">
+            <button id="btn-arriba" class="btn-arriba">⬆</button>
+        </div>
+        <div class="fila">
+            <button id="btn-izq">⬅</button>
+            <button id="btn-abajo" class="btn-abajo">⬇</button>
+            <button id="btn-der">➡</button>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ===== CONFIGURACIÓN =====
+        const CONFIG = {
+            mundo: { ancho: 40, profundo: 40 },
+            jugador: { velocidad: 7, radio: 0.7 },
+            tesoros: { cantidad: 18, radio: 0.6 },
+            obstaculos: { cantidad: 14, radio: 0.9 },
+            tiempoLimite: 60,
+        };
+
+        // ===== ESTADO =====
+        let estado = {
+            puntuacion: 0,
+            tiempo: CONFIG.tiempoLimite,
+            activo: true,
+        };
+
+        // ===== DOM =====
+        const puntuacionSpan = document.getElementById('puntuacion');
+        const tiempoSpan = document.getElementById('tiempo');
+        const gameOverDiv = document.getElementById('game-over');
+        const finalPuntuacionSpan = document.getElementById('final-puntuacion');
+        const btnReiniciar = document.getElementById('btn-reiniciar');
+
+        // ===== ESCENA =====
+        const escena = new THREE.Scene();
+        escena.background = new THREE.Color(0x0a0a1a);
+        escena.fog = new THREE.Fog(0x0a0a1a, 25, 45);
+
+        // ===== CÁMARA =====
+        const camara = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+        camara.position.set(12, 10, 12);
+
+        // ===== RENDERIZADOR =====
+        const renderizador = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: "high-performance",
+        });
+        renderizador.setSize(window.innerWidth, window.innerHeight);
+        renderizador.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderizador.shadowMap.enabled = true;
+        renderizador.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderizador.toneMapping = THREE.ACESFilmicToneMapping;
+        renderizador.toneMappingExposure = 1.2;
+        document.body.prepend(renderizador.domElement);
+
+        // ===== ILUMINACIÓN =====
+        const luzAmbiental = new THREE.AmbientLight(0x334466, 0.6);
+        escena.add(luzAmbiental);
+
+        const luzPrincipal = new THREE.DirectionalLight(0xffeedd, 1.5);
+        luzPrincipal.position.set(15, 25, 10);
+        luzPrincipal.castShadow = true;
+        luzPrincipal.shadow.mapSize.width = 2048;
+        luzPrincipal.shadow.mapSize.height = 2048;
+        luzPrincipal.shadow.camera.near = 0.1;
+        luzPrincipal.shadow.camera.far = 60;
+        luzPrincipal.shadow.camera.left = -30;
+        luzPrincipal.shadow.camera.right = 30;
+        luzPrincipal.shadow.camera.top = 30;
+        luzPrincipal.shadow.camera.bottom = -30;
+        luzPrincipal.shadow.bias = -0.001;
+        escena.add(luzPrincipal);
+
+        const luzRelleno = new THREE.DirectionalLight(0x4488ff, 0.4);
+        luzRelleno.position.set(-10, 5, 15);
+        escena.add(luzRelleno);
+
+        const luzFondo = new THREE.DirectionalLight(0xff6644, 0.2);
+        luzFondo.position.set(-5, 0, -20);
+        escena.add(luzFondo);
+
+        // Hemisferio
+        const luzHemisferio = new THREE.HemisphereLight(0x4488ff, 0x002244, 0.4);
+        escena.add(luzHemisferio);
+
+        // ===== SUELO =====
+        const sueloGeometria = new THREE.PlaneGeometry(CONFIG.mundo.ancho, CONFIG.mundo.profundo);
+        const sueloMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a1a2e,
+            roughness: 0.9,
+            metalness: 0.1,
+        });
+        const suelo = new THREE.Mesh(sueloGeometria, sueloMaterial);
+        suelo.rotation.x = -Math.PI / 2;
+        suelo.receiveShadow = true;
+        escena.add(suelo);
+
+        // Cuadrícula
+        const gridHelper = new THREE.GridHelper(CONFIG.mundo.ancho, 24, 0x444488, 0x333366);
+        gridHelper.position.y = 0.02;
+        escena.add(gridHelper);
+
+        // Círculos decorativos
+        for (let i = 0; i < 12; i++) {
+            const radio = 3 + i * 2.5;
+            const geo = new THREE.RingGeometry(radio - 0.05, radio, 48);
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0x222244,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide,
+            });
+            const ring = new THREE.Mesh(geo, mat);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = 0.03;
+            escena.add(ring);
+        }
+
+        // ===== BORDES (con luz) =====
+        const bordeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff3333,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.15,
+            transparent: true,
+            opacity: 0.25,
+        });
+
+        function crearBordes() {
+            const m = CONFIG.mundo.ancho / 2;
+            const p = CONFIG.mundo.profundo / 2;
+            const bordes = [
+                { x: 0, z: -p, w: CONFIG.mundo.ancho, h: 0.4 },
+                { x: 0, z: p, w: CONFIG.mundo.ancho, h: 0.4 },
+                { x: -m, z: 0, w: 0.4, h: CONFIG.mundo.profundo },
+                { x: m, z: 0, w: 0.4, h: CONFIG.mundo.profundo },
+            ];
+            bordes.forEach(b => {
+                const geo = new THREE.BoxGeometry(b.w, 0.4, b.h);
+                const mesh = new THREE.Mesh(geo, bordeMaterial);
+                mesh.position.set(b.x, 0.2, b.z);
+                mesh.receiveShadow = true;
+                escena.add(mesh);
+            });
+        }
+        crearBordes();
+
+        // ===== JUGADOR =====
+        const jugadorGrupo = new THREE.Group();
+
+        // Cuerpo principal (esfera con gradiente)
+        const cuerpoGeo = new THREE.SphereGeometry(CONFIG.jugador.radio, 32, 32);
+        const cuerpoMat = new THREE.MeshStandardMaterial({
+            color: 0x00d4ff,
+            emissive: 0x0066cc,
+            emissiveIntensity: 0.25,
+            roughness: 0.2,
+            metalness: 0.6,
+        });
+        const cuerpo = new THREE.Mesh(cuerpoGeo, cuerpoMat);
+        cuerpo.castShadow = true;
+        jugadorGrupo.add(cuerpo);
+
+        // Aura
+        const auraGeo = new THREE.SphereGeometry(CONFIG.jugador.radio + 0.15, 24, 24);
+        const auraMat = new THREE.MeshBasicMaterial({
+            color: 0x00ddff,
+            transparent: true,
+            opacity: 0.08,
+            wireframe: true,
+        });
+        const aura = new THREE.Mesh(auraGeo, auraMat);
+        jugadorGrupo.add(aura);
+
+        // Ojos
+        const ojoMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.2 });
+        const pupilaMat = new THREE.MeshStandardMaterial({ color: 0x111122 });
+
+        for (let lado of [-1, 1]) {
+            const ojo = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), ojoMat);
+            ojo.position.set(lado * 0.38, 0.15, -0.7);
+            jugadorGrupo.add(ojo);
+
+            const pupila = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), pupilaMat);
+            pupila.position.set(lado * 0.45, 0.15, -0.85);
+            jugadorGrupo.add(pupila);
+        }
+
+        // Anillo de energía
+        const anilloGeo = new THREE.TorusGeometry(CONFIG.jugador.radio + 0.15, 0.04, 12, 32);
+        const anilloMat = new THREE.MeshStandardMaterial({
+            color: 0x00ff88,
+            emissive: 0x00ff88,
+            emissiveIntensity: 0.6,
+            transparent: true,
+            opacity: 0.7,
+        });
+        const anillo = new THREE.Mesh(anilloGeo, anilloMat);
+        anillo.rotation.x = Math.PI / 2;
+        anillo.position.y = -0.2;
+        jugadorGrupo.add(anillo);
+
+        const anillo2 = anillo.clone();
+        anillo2.material = anilloMat.clone();
+        anillo2.material.color.setHex(0x4488ff);
+        anillo2.material.emissive.setHex(0x4488ff);
+        anillo2.scale.set(1.3, 1.3, 1.3);
+        anillo2.position.y = 0.3;
+        anillo2.material.opacity = 0.3;
+        jugadorGrupo.add(anillo2);
+
+        jugadorGrupo.position.set(0, CONFIG.jugador.radio, 0);
+        escena.add(jugadorGrupo);
+
+        // ===== TESOROS =====
+        const tesoros = [];
+
+        function crearTesoro(pos) {
+            const grupo = new THREE.Group();
+
+            // Moneda
+            const monedaGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.12, 20);
+            const monedaMat = new THREE.MeshStandardMaterial({
+                color: 0xffd700,
+                emissive: 0xff8800,
+                emissiveIntensity: 0.25,
+                roughness: 0.15,
+                metalness: 0.9,
+            });
+            const moneda = new THREE.Mesh(monedaGeo, monedaMat);
+            moneda.rotation.x = Math.PI / 2;
+            moneda.castShadow = true;
+            grupo.add(moneda);
+
+            // Brillo
+            const brilloMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                emissive: 0xffdd44,
+                emissiveIntensity: 0.8,
+            });
+            const brillo = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), brilloMat);
+            brillo.position.y = 0.3;
+            grupo.add(brillo);
+
+            // Partículas alrededor
+            for (let i = 0; i < 4; i++) {
+                const ang = (i / 4) * Math.PI * 2;
+                const p = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.04, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.5 })
+                );
+                p.position.set(Math.cos(ang) * 0.5, Math.sin(ang * 2) * 0.1 + 0.2, Math.sin(ang) * 0.5);
+                grupo.add(p);
+                grupo.userData[`p${i}`] = { ang: ang, speed: 1 + Math.random() * 0.5 };
+            }
+
+            grupo.position.copy(pos);
+            grupo.position.y = 0.4;
+            escena.add(grupo);
+
+            grupo.userData = {
+                velocidadY: 0.6 + Math.random() * 0.6,
+                fase: Math.random() * Math.PI * 2,
+                rotacionVel: 1.5 + Math.random() * 2,
+            };
+
+            return grupo;
+        }
+
+        function generarTesoros() {
+            const mitad = CONFIG.mundo.ancho / 2 - 2.5;
+            for (let i = 0; i < CONFIG.tesoros.cantidad; i++) {
+                let pos, valido = false,
+                    intentos = 0;
+                while (!valido && intentos < 50) {
+                    pos = new THREE.Vector3(
+                        (Math.random() - 0.5) * mitad * 2,
+                        0,
+                        (Math.random() - 0.5) * mitad * 2
+                    );
+                    valido = pos.distanceTo(new THREE.Vector3(0, 0, 0)) > 3;
+                    for (const t of tesoros) {
+                        if (pos.distanceTo(t.position) < 2) { valido = false; break; }
+                    }
+                    intentos++;
+                }
+                if (valido) {
+                    const tesoro = crearTesoro(pos);
+                    tesoros.push(tesoro);
+                }
+            }
+        }
+        generarTesoros();
+
+        // ===== OBSTÁCULOS =====
+        const obstaculos = [];
+
+        function crearObstaculo(pos) {
+            const tipo = Math.random() > 0.5 ? 'caja' : 'cono';
+            let mesh;
+            const color = tipo === 'caja' ? 0xff3333 : 0xff8800;
+            const emi = tipo === 'caja' ? 0x661111 : 0x663300;
+
+            if (tipo === 'caja') {
+                const geo = new THREE.BoxGeometry(1.0, 1.0, 1.0);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: color,
+                    emissive: emi,
+                    emissiveIntensity: 0.15,
+                    roughness: 0.6,
+                    metalness: 0.4,
+                });
+                mesh = new THREE.Mesh(geo, mat);
+            } else {
+                const geo = new THREE.ConeGeometry(0.8, 1.4, 8);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: color,
+                    emissive: emi,
+                    emissiveIntensity: 0.15,
+                    roughness: 0.6,
+                    metalness: 0.4,
+                });
+                mesh = new THREE.Mesh(geo, mat);
+            }
+
+            mesh.position.copy(pos);
+            mesh.position.y = 0.7;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            escena.add(mesh);
+
+            mesh.userData = {
+                rotacionVel: (Math.random() - 0.5) * 2.5,
+                oscilacion: 0.5 + Math.random() * 0.5,
+                fase: Math.random() * Math.PI * 2,
+            };
+
+            return mesh;
+        }
+
+        function generarObstaculos() {
+            const mitad = CONFIG.mundo.ancho / 2 - 2.5;
+            for (let i = 0; i < CONFIG.obstaculos.cantidad; i++) {
+                let pos, valido = false,
+                    intentos = 0;
+                while (!valido && intentos < 50) {
+                    pos = new THREE.Vector3(
+                        (Math.random() - 0.5) * mitad * 2,
+                        0,
+                        (Math.random() - 0.5) * mitad * 2
+                    );
+                    valido = pos.distanceTo(new THREE.Vector3(0, 0, 0)) > 3;
+                    for (const t of tesoros) {
+                        if (pos.distanceTo(t.position) < 2.2) { valido = false; break; }
+                    }
+                    for (const o of obstaculos) {
+                        if (pos.distanceTo(o.position) < 2) { valido = false; break; }
+                    }
+                    intentos++;
+                }
+                if (valido) {
+                    const obs = crearObstaculo(pos);
+                    obstaculos.push(obs);
+                }
+            }
+        }
+        generarObstaculos();
+
+        // ===== PARTÍCULAS =====
+        const particulas = [];
+
+        function crearParticulas(pos, color = 0xffd700, count = 25) {
+            for (let i = 0; i < count; i++) {
+                const geo = new THREE.SphereGeometry(0.06 + Math.random() * 0.08, 6, 6);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: color,
+                    emissive: color,
+                    emissiveIntensity: 0.6,
+                    transparent: true,
+                    opacity: 1,
+                });
+                const p = new THREE.Mesh(geo, mat);
+                p.position.copy(pos);
+                const dir = new THREE.Vector3(
+                    (Math.random() - 0.5) * 6,
+                    Math.random() * 6 + 2,
+                    (Math.random() - 0.5) * 6
+                );
+                p.userData = {
+                    velocidad: dir,
+                    vida: 0.8 + Math.random() * 0.6,
+                    maxVida: 0.8 + Math.random() * 0.6,
+                };
+                escena.add(p);
+                particulas.push(p);
+            }
+        }
+
+        // ===== CONTROLES TECLADO =====
+        const teclas = { w: false, a: false, s: false, d: false };
+
+        document.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (k in teclas) teclas[k] = true;
+            if (['w', 'a', 's', 'd', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k) ||
+                e.key.startsWith('Arrow')) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (k in teclas) teclas[k] = false;
+        });
+
+        // ===== CONTROLES MÓVILES =====
+        const mapaBotones = {
+            'btn-arriba': 'w',
+            'btn-abajo': 's',
+            'btn-izq': 'a',
+            'btn-der': 'd'
+        };
+
+        Object.entries(mapaBotones).forEach(([id, tecla]) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            const activar = (e) => { e.preventDefault();
+                teclas[tecla] = true; };
+            const desactivar = (e) => { e.preventDefault();
+                teclas[tecla] = false; };
+
+            btn.addEventListener('touchstart', activar, { passive: false });
+            btn.addEventListener('touchend', desactivar, { passive: false });
+            btn.addEventListener('touchcancel', desactivar, { passive: false });
+            btn.addEventListener('mousedown', activar);
+            btn.addEventListener('mouseup', desactivar);
+            btn.addEventListener('mouseleave', desactivar);
+        });
+
+        // ===== COLISIONES =====
+        function checkColisiones() {
+            const posJ = jugadorGrupo.position;
+            const rJ = CONFIG.jugador.radio;
+
+            // Tesoros
+            for (let i = tesoros.length - 1; i >= 0; i--) {
+                const t = tesoros[i];
+                if (posJ.distanceTo(t.position) < rJ + CONFIG.tesoros.radio) {
+                    crearParticulas(t.position, 0xffd700, 30);
+                    escena.remove(t);
+                    tesoros.splice(i, 1);
+                    estado.puntuacion++;
+                    puntuacionSpan.textContent = estado.puntuacion;
+
+                    // Generar nuevo tesoro
+                    const mitad = CONFIG.mundo.ancho / 2 - 2.5;
+                    let pos, valido = false,
+                        intentos = 0;
+                    while (!valido && intentos < 30) {
+                        pos = new THREE.Vector3(
+                            (Math.random() - 0.5) * mitad * 2,
+                            0,
+                            (Math.random() - 0.5) * mitad * 2
+                        );
+                        valido = pos.distanceTo(posJ) > 3;
+                        for (const t2 of tesoros) {
+                            if (pos.distanceTo(t2.position) < 2) { valido = false; break; }
+                        }
+                        intentos++;
+                    }
+                    if (valido) {
+                        const nuevo = crearTesoro(pos);
+                        tesoros.push(nuevo);
+                    }
+                }
+            }
+
+            // Obstáculos
+            for (const o of obstaculos) {
+                if (posJ.distanceTo(o.position) < rJ + CONFIG.obstaculos.radio) {
+                    crearParticulas(posJ, 0xff3333, 40);
+                    terminarJuego();
+                    return;
+                }
+            }
+
+            // Límites
+            const limite = CONFIG.mundo.ancho / 2 - 0.3;
+            if (Math.abs(posJ.x) > limite || Math.abs(posJ.z) > limite) {
+                crearParticulas(posJ, 0xff3333, 30);
+                terminarJuego();
+            }
+        }
+
+        // ===== TEMPORIZADOR =====
+        let intervalo;
+
+        function iniciarTemporizador() {
+            intervalo = setInterval(() => {
+                if (estado.activo) {
+                    estado.tiempo--;
+                    tiempoSpan.textContent = estado.tiempo;
+                    if (estado.tiempo <= 10) {
+                        tiempoSpan.classList.add('peligro');
+                    }
+                    if (estado.tiempo <= 0) {
+                        terminarJuego();
+                    }
+                }
+            }, 1000);
+        }
+
+        // ===== FIN JUEGO =====
+        function terminarJuego() {
+            if (!estado.activo) return;
+            estado.activo = false;
+            clearInterval(intervalo);
+            gameOverDiv.style.display = 'block';
+            finalPuntuacionSpan.textContent = estado.puntuacion;
+        }
+
+        // ===== REINICIO =====
+        function reiniciarJuego() {
+            estado.puntuacion = 0;
+            estado.tiempo = CONFIG.tiempoLimite;
+            estado.activo = true;
+            puntuacionSpan.textContent = '0';
+            tiempoSpan.textContent = CONFIG.tiempoLimite;
+            tiempoSpan.classList.remove('peligro');
+            gameOverDiv.style.display = 'none';
+
+            jugadorGrupo.position.set(0, CONFIG.jugador.radio, 0);
+
+            // Limpiar
+            tesoros.forEach(t => escena.remove(t));
+            tesoros.length = 0;
+            obstaculos.forEach(o => escena.remove(o));
+            obstaculos.length = 0;
+            particulas.forEach(p => escena.remove(p));
+            particulas.length = 0;
+
+            // Regenerar
+            generarTesoros();
+            generarObstaculos();
+
+            clearInterval(intervalo);
+            iniciarTemporizador();
+        }
+
+        btnReiniciar.addEventListener('click', reiniciarJuego);
+
+        // ===== BUCLE PRINCIPAL =====
+        const reloj = new THREE.Clock();
+
+        function actualizar() {
+            const delta = Math.min(reloj.getDelta(), 0.05);
+            const tiempo = reloj.getElapsedTime();
+
+            if (estado.activo) {
+                // Movimiento
+                const vel = CONFIG.jugador.velocidad;
+                const mov = new THREE.Vector3(0, 0, 0);
+                if (teclas.w) mov.z -= vel * delta;
+                if (teclas.s) mov.z += vel * delta;
+                if (teclas.a) mov.x -= vel * delta;
+                if (teclas.d) mov.x += vel * delta;
+
+                if (mov.length() > 0) {
+                    mov.normalize().multiplyScalar(vel * delta);
+                    jugadorGrupo.position.add(mov);
+                    const ang = Math.atan2(mov.x, mov.z);
+                    jugadorGrupo.rotation.y += (ang - jugadorGrupo.rotation.y) * 0.08;
+                }
+
+                // Animar jugador
+                cuerpo.position.y = Math.sin(tiempo * 2) * 0.03;
+                aura.rotation.x = tiempo * 0.3;
+                aura.rotation.y = tiempo * 0.5;
+                anillo.rotation.z = tiempo * 0.5;
+                anillo2.rotation.z = -tiempo * 0.3;
+                anillo2.material.opacity = 0.2 + Math.sin(tiempo * 2) * 0.1;
+
+                // Animar tesoros
+                tesoros.forEach((t, i) => {
+                    const d = t.userData;
+                    t.position.y = 0.4 + Math.sin(tiempo * d.velocidadY + d.fase) * 0.25;
+                    t.rotation.y += d.rotacionVel * delta;
+                    // Partículas alrededor
+                    Object.keys(t.userData).forEach(k => {
+                        if (k.startsWith('p')) {
+                            const data = t.userData[k];
+                            const idx = parseInt(k.replace('p', ''));
+                            const child = t.children[idx + 1];
+                            if (child) {
+                                const ang2 = data.ang + tiempo * data.speed;
+                                child.position.x = Math.cos(ang2) * 0.5;
+                                child.position.z = Math.sin(ang2) * 0.5;
+                                child.position.y = Math.sin(ang2 * 2) * 0.1 + 0.2;
+                            }
+                        }
+                    });
+                });
+
+                // Animar obstáculos
+                obstaculos.forEach(o => {
+                    o.rotation.y += o.userData.rotacionVel * delta;
+                    o.rotation.x = Math.sin(tiempo * o.userData.oscilacion + o.userData.fase) * 0.1;
+                    o.position.y = 0.7 + Math.sin(tiempo * o.userData.oscilacion + o.userData.fase) * 0.1;
+                });
+
+                // Animar partículas
+                for (let i = particulas.length - 1; i >= 0; i--) {
+                    const p = particulas[i];
+                    p.position.add(p.userData.velocidad.clone().multiplyScalar(delta));
+                    p.userData.velocidad.y -= 4 * delta;
+                    p.userData.vida -= delta * 0.7;
+                    p.material.opacity = Math.max(0, p.userData.vida / p.userData.maxVida);
+                    p.scale.setScalar(0.3 + 0.7 * (p.userData.vida / p.userData.maxVida));
+                    if (p.userData.vida <= 0) {
+                        escena.remove(p);
+                        particulas.splice(i, 1);
+                    }
+                }
+
+                // Colisiones
+                checkColisiones();
+            }
+
+            // Cámara
+            const target = jugadorGrupo.position.clone();
+            const offset = new THREE.Vector3(10, 8, 10);
+            const targetPos = target.clone().add(offset);
+            camara.position.lerp(targetPos, 0.04);
+            camara.lookAt(target.x, 0, target.z);
+
+            renderizador.render(escena, camara);
+            requestAnimationFrame(actualizar);
+        }
+
+        // ===== REDIMENSIONAR =====
+        window.addEventListener('resize', () => {
+            camara.aspect = window.innerWidth / window.innerHeight;
+            camara.updateProjectionMatrix();
+            renderizador.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ===== INICIAR =====
+        iniciarTemporizador();
+        actualizar();
+
+        // Exponer reinicio global
+        window.reiniciarJuego = reiniciarJuego;
+
+        console.log('🎮 ¡Cazador de Tesoros 3D iniciado!');
+        console.log('📖 Controles: WASD para moverte');
+        console.log('💰 Recolecta tesoros dorados');
+        console.log('⚠️ Evita los obstáculos rojos/naranjas');
+    </script>
+</body>
+</html>
